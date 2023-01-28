@@ -1,8 +1,8 @@
 import pandas
-from keras.layers import Dense
-from keras.layers import LSTM as lstm
-from keras.models import Sequential
 from numpy import array
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import LSTM as lstm
+from tensorflow.keras.models import Sequential
 
 # split a univariate sequence into samples
 from forecaster.Test_Models.TestModel import TestModel
@@ -68,7 +68,7 @@ class LSTM(TestModel):
 
     def run_model(self, train, test, column_name):
         # define input sequence
-        raw_seq = [10, 20, 30, 40, 50, 60, 70, 80, 90]
+
         # choose a number of time steps
         n_steps = self.n_steps
         # split into samples
@@ -85,7 +85,9 @@ class LSTM(TestModel):
         model.fit(X, y, epochs=200, verbose=0)
         # demonstrate prediction
         last_n_records_in_train = train.iloc[-n_steps:]
-        new_test = last_n_records_in_train.append(test, ignore_index=True)
+        new_test = pandas.concat([last_n_records_in_train, test], ignore_index=True)
+
+        # new_test = last_n_records_in_train.append(test, ignore_index=True)
 
         X_test, y_test = split_sequence(new_test[column_name], n_steps)
         x_input = X_test.reshape((X_test.shape[0], n_steps, n_features))

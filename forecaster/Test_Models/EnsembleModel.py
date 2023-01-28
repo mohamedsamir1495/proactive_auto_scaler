@@ -2,34 +2,52 @@ import collections
 from datetime import timedelta
 
 import pandas as pd
-from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import mean_squared_error
 
-from forecaster.Test_Models.TestModel import TestModel
+from forecaster.Test_Models.CatBoost import CatBoost
 from forecaster.Test_Models.FacebookProphet import FacebookProphet
 from forecaster.Test_Models.LSTM import LSTM
+from forecaster.Test_Models.LightGBM import LightGBM
 from forecaster.Test_Models.LinearRegression import LinearRegression
 from forecaster.Test_Models.MovingAverage import MovingAverage
+from forecaster.Test_Models.NBeats import NBeats
+from forecaster.Test_Models.NHits import NHits
 from forecaster.Test_Models.SVMPolynomialKernel import SVMPolynomialKernel
 from forecaster.Test_Models.SVMRBFKernel import SVMRBFKernel
+from forecaster.Test_Models.TFT import TFT
+from forecaster.Test_Models.TestModel import TestModel
 from forecaster.Test_Models.WeeklyAverage import WeeklyAverage
+from forecaster.Test_Models.XGBoost import XGBoost
 
 
 def train_models_on_data(train_data, column_name):
     weeklyAverage = WeeklyAverage()
     movingAverage = MovingAverage(2)
     lstm = LSTM(14, 1)
+    lightgbm = LightGBM()
+    xgboost = XGBoost()
+    catboost = CatBoost()
     linearRegression = LinearRegression()
     svmPolynomialKernel = SVMPolynomialKernel()
     svmRBFKernel = SVMRBFKernel()
-    # facebookProphet = FacebookProphet()
+    facebookProphet = FacebookProphet()
+    NBeatsModel = NBeats(14, 1, 9)
+    NHitsModel = NHits(14, 1, 9)
+    TFTModel = TFT(14, 1, 75)
     test_models = collections.ChainMap({
         lstm.name: lstm,
-        weeklyAverage.name: weeklyAverage,
         movingAverage.name: movingAverage,
-        # facebookProphet.name: facebookProphet,
+        weeklyAverage.name: weeklyAverage,
+        lightgbm.name: lightgbm,
+        xgboost.name: xgboost,
+        catboost.name : catboost,
+        facebookProphet.name: facebookProphet,
         linearRegression.name: linearRegression,
         svmPolynomialKernel.name: svmPolynomialKernel,
-        svmRBFKernel.name: svmRBFKernel
+        svmRBFKernel.name: svmRBFKernel,
+        NBeatsModel.name: NBeatsModel,
+        NHitsModel.name: NHitsModel,
+        TFTModel.name: TFTModel
     })
 
     print('=========== Starting Model training process =========')
@@ -49,7 +67,8 @@ def get_current_best_prediction_model(
         column_name,
         previous_best_model_name,
 ):
-    best_mae = mean_absolute_error(actual_result_of_last_record[column_name], previous_prediction.iloc[:, -1:])
+    best_rmse = mean_squared_error(actual_result_of_last_record[column_name], previous_prediction.iloc[:, -1:], squared=False)
+
     current_best_model_name = previous_best_model_name
     for key, val in test_models.items():
         if (current_best_model_name == key):
@@ -58,13 +77,12 @@ def get_current_best_prediction_model(
             proposed_previous_prediction = val.get_prediction(train, actual_result_of_last_record, column_name) \
                 .fillna(value=99999999)
 
-            if best_mae == None:
-                best_mae = mean_absolute_error(actual_result_of_last_record[column_name], proposed_previous_prediction)
+            if best_rmse == None:
+                best_rmse = mean_squared_error(actual_result_of_last_record[column_name], proposed_previous_prediction, squared=False)
             else:
-                current_mae = mean_absolute_error(actual_result_of_last_record[column_name],
-                                                  proposed_previous_prediction)
-                if current_mae < best_mae:
-                    best_mae = current_mae
+                current_rmse = mean_squared_error(actual_result_of_last_record[column_name], proposed_previous_prediction,squared=False)
+                if current_rmse < best_rmse:
+                    best_rmse = current_rmse
                     current_best_model_name = key
 
     return test_models[current_best_model_name]
